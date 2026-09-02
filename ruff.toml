@@ -1,0 +1,40 @@
+line-length = 110
+src = ["koine/"]
+
+[format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"
+docstring-code-format = true
+docstring-code-line-length = 60
+
+[lint]
+select = [
+    "E",
+    "F",
+    "B",
+    "SIM",
+    "I",
+    "Q",
+    "T20",
+    "W",
+    "UP",
+    "C4",
+    "FA",
+    "ISC",
+    "ICN",
+    "RET",
+    "SIM",
+    "TID",
+    "TC",
+    "PTH",
+    "TD",
+    "NPY",
+    "FURB",
+]
+extend-safe-fixes = ["F401"]
+ignore = ["E501", "Q000", "TC001", "TC003"]
+
+[lint.isort]
+lines-between-types = 1
+from-first = false

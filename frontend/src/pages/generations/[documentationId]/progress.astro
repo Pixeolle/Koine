@@ -1,0 +1,15 @@
+---
+export const prerender = false;
+
+import "../../../styles/global.css";
+import ProgressTracker from "../../../components/ProgressTracker.svelte";
+
+const { documentationId } = Astro.params;
+---
+
+<html lang="fr">
+    <body class="min-h-screen bg-background">
+        <ProgressTracker documentationId={documentationId} client:load/>
+    </body>
+</html>
+ 

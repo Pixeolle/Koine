@@ -1,0 +1,87 @@
+services:
+
+  koine-memgraph:
+    image: memgraph/memgraph
+    container_name: koine-memgraph
+    healthcheck:
+      test: ["CMD-SHELL", "echo 'SHOW STORAGE INFO;' | mgconsole || exit 1"]
+      interval: 2s
+      timeout: 3s
+      retries: 10
+    ports:
+      - "7687:7687"
+      - "7444:7444"
+    volumes:
+      - mg_lib:/var/lib/memgraph
+
+  koine-memgraph-lab:
+    image: memgraph/lab
+    container_name: koine-memgraph-lab
+    ports:
+      - "3000:3000"
+    environment:
+      - QUICK_CONNECT_MG_HOST=koine-memgraph
+      - QUICK_CONNECT_MG_PORT=7687
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+      secrets:
+        - pip.conf
+        - netrc
+    env_file:
+      - .env
+    environment:
+      - GRAPH_ENGINE__NEO4J_HOST=koine-memgraph
+    depends_on:
+      koine-memgraph:
+        condition: service_healthy
+    volumes:
+      - outputs_data:/koine/outputs
+      - tokenizer_data:/koine/tokenizer
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        PUBLIC_API_URL: ${PUBLIC_API_URL}
+        PUBLIC_WS_URL: ${PUBLIC_WS_URL}
+        INTERNAL_API_URL: http://backend:8000
+      secrets:
+        - npmrc
+    depends_on:
+      backend:
+          condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:4321', (res) => process.exit(res.statusCode < 500 ? 0 : 1)).on('error', () => process.exit(1))"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 15s
+    ports:
+      - "4321:4321"
+    restart: unless-stopped
+
+volumes:
+  mg_lib:
+  outputs_data:
+  tokenizer_data:
+
+secrets:
+  pip.conf:
+    file: ${USERPROFILE}/.pip/pip.conf
+  netrc:
+    file: ${USERPROFILE}/.netrc
+  npmrc:
+    file: ${USERPROFILE}/.npmrc

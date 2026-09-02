@@ -1,0 +1,40 @@
+---
+export const prerender = false;
+
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import { api } from "$lib/api/client.ts";
+import { buildSidebar } from "$lib/build-sidebar.ts";
+import { toLabel } from "$lib/build-sidebar.ts"
+import MermaidRenderer from "../../../components/MermaidRenderer.svelte";
+import { renderMarkdown } from '$lib/markdown.ts'
+import ChatPopup from "../../../components/ChatPopup.svelte";
+
+
+const { documentationId, slug } = Astro.params as  { documentationId: string; slug: string | undefined };
+const documentName = slug || "index";
+
+const [documents, current] = await Promise.all([
+    api.listDocuments(documentationId),
+    api.getDocument(documentationId, documentName),
+]);
+
+const sidebarItems = buildSidebar(documents, documentationId);
+
+const html = await renderMarkdown(
+    current.content,
+    documentationId,
+    new Set(documents.map(d => d.document_name))
+);
+let document_title: string
+if (current.document_name === undefined) {
+    document_title = "Accueil"
+} else {
+    document_title = current.document_name === "index" ? "Accueil" : toLabel(current.document_name.split("/").pop());
+}
+---
+
+<StarlightPage frontmatter={{ title: document_title, tableOfContents: false }} sidebar={sidebarItems}>
+    <Fragment set:html={html}/>
+    <MermaidRenderer client:load />
+    <ChatPopup documentationId={documentationId} documents={new Set(documents.map(d => d.document_name))} client:load/>
+</StarlightPage>
